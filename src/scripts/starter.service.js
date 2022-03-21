@@ -1,5 +1,5 @@
 function local(el) {
-  console.log(el);
+  console.log('local fn', el);
 
 }
 
@@ -7,7 +7,7 @@ function local(el) {
 
 export function onClick(event) {
   local(this);
-  console.log(event);
+  console.log('click', event);
   return false;
 }
 

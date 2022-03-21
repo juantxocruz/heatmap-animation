@@ -12,8 +12,9 @@ const ASSET_PATH = process.env.ASSET_PATH || '/';
 module.exports = {
   mode: 'none',
   entry: {
-    app: Path.resolve(__dirname, '../src/scripts/index.js'),
+    app: Path.resolve(__dirname, '../src/scripts/index.ts'),
   },
+  devtool: 'inline-source-map',
   output: {
     publicPath: ASSET_PATH,
     path: Path.join(__dirname, '../build'),
@@ -46,9 +47,9 @@ module.exports = {
 
     rules: [
       {
-        test: /\.mjs$/,
-        include: /node_modules/,
-        type: 'javascript/auto',
+        test: /\.tsx?$/,
+        use: 'ts-loader',
+        exclude: /node_modules/,
       },
       {
         test: /\.(ico|jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2)(\?.*)?$/,
