@@ -20,3 +20,97 @@ body {
   width: 100%;
   min-height: 480px;
 }
+
+.symbol {
+  display: inline !important;
+  float: right;
+}
+
+.demo-wrapper {
+  position: relative;
+}
+
+/* animation player css */
+.timeline-wrapper {
+  z-index: 1000;
+  position: fixed;
+  top: 10px;
+  left: 38%;
+  right: 60px;
+  max-width: 700px;
+  height: 35px;
+  background: white;
+  transition: 1s ease all;
+  border-radius: 4px;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.65);
+}
+
+.heatmap-timeline {
+  position: absolute;
+  top: 0;
+  right: 15px;
+  left: 80px;
+  height: 100%;
+  margin-right: 15px;
+}
+
+.heatmap-timeline .line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 15px;
+  height: 2px;
+  background: #d7d7d7;
+}
+
+.heatmap-timeline .time-point.active {
+  background: #7367f0 !important;
+}
+
+.heatmap-timeline .time-point {
+  position: absolute;
+  background: white;
+  border: 2px solid #7367f0;
+  width: 8px;
+  height: 8px;
+  border-radius: 100%;
+  cursor: pointer;
+  top: 15px;
+  transform: translateX(-50%) translateY(-50%);
+}
+
+.heatmap-timeline .time-point:hover {
+  box-shadow: 0 0 5px black;
+}
+
+.timeline-wrapper button {
+  position: absolute;
+  outline: none;
+  color: black;
+  background: #f2f2f2;
+  width: 65px;
+  height: 100%;
+  cursor: pointer;
+  border: none;
+  text-transform: uppercase;
+  border-top-left-radius: 3px;
+  border-bottom-left-radius: 3px;
+}
+
+.button-live {
+  color: white !important;
+  background: #f50057 !important;
+}
+
+.button-now {
+  color: white !important;
+  background: #7367f0 !important;
+}
+
+.heatmap-timeline .time-point.active {
+  background: black;
+}
+
+.timeline-live {
+  max-width: 108px !important;
+}
