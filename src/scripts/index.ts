@@ -6,9 +6,6 @@ import 'leaflet/dist/leaflet.css';
 import '../styles/index.scss';
 
 
-
-
-
 if (process.env.NODE_ENV === 'development') {
   require('../index.html');
 }
@@ -18,7 +15,6 @@ export interface LatLngCount {
   lng: number;
   count: number
 }
-
 
 // globals
 
@@ -298,9 +294,9 @@ function drawHeatMap(data: Array<any>, setView = true, animation_ix = -1) {
 }
 
 function animate(data: any) {
-
   animationData = [];
 
+  // build data
   for (var i = 0; i < venuesData[0]['day_raw'].length; i++) {
     let hour_data: Array<LatLngCount> = [];
     venuesData.forEach((item, index) => {
@@ -309,22 +305,18 @@ function animate(data: any) {
       hour_data.push({ lat: item['venue_lat'], lng: item['venue_lng'], count: weight })
 
     });
-
     animationData.push(hour_data);
-
-
-
   };
-
-  for (var i = 0; i < venuesData[0]['day_raw'].length; i++) {
-    player = new AnimationPlayer(heatmapLayer, animationData, 100, 100, document.querySelector('.timeline-wrapper'), null, false);
-
-  };
-
-
-
-
-
+  // build player: args-->
+  // public heatmap: the layer,
+  // public data: the overall hours data,
+  // public interval: time interval,
+  // public animationSpeed: speed,
+  // public readonly wrapperEl: querySelector Element,
+  // public playButton: If not, it is created,
+  // public isPlaying: boolean
+  player = new AnimationPlayer(heatmapLayer, animationData, 100, 100, document.querySelector('.timeline-wrapper'), null, false);
+  //player.play();
 
 }
 function init() {
@@ -341,7 +333,18 @@ function init() {
       drawHeatMap(heatmapData);
 
     }
+  });
+
+  getJSON("./data/samples_popular_times.json", (err: any, data: any) => {
+    if (err !== null) {
+      console.log('Something went wrong: ' + err);
+    } else {
+      console.log('Your query count: ' + data);
+      let x;
+
+    }
   })
+
 }
 
 window.onload = () => {
