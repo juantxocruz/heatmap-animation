@@ -1,7 +1,6 @@
 import * as L from 'leaflet';
 import HeatmapOverlay from 'leaflet-heatmap';
 import { AnimationPlayer } from './animation-player';
-import { reshapeData } from './reshape.service';
 
 import 'leaflet/dist/leaflet.css';
 import '../styles/index.scss';
@@ -17,18 +16,7 @@ export interface LatLngCount {
   count: number
 }
 
-// config
-
-
-function getConfig() {
-  let url = window.location;
-  return {
-    url: url,
-    baseUrl: url.protocol + "//" + url.host + "/" + url.pathname.split('/')[1]
-
-  }
-}
-
+// globals
 
 // map
 let map_leaflet: L.Map;
@@ -41,47 +29,15 @@ const arcGisMapLayer: L.TileLayer = L.tileLayer('https://server.arcgisonline.com
   attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
 });
 const basemap = arcGisMapLayer;
-const defaultCenter: L.LatLngTuple = [40.423686379181405, -3.710858047841252];
-const defaultZoom: number = 16;
+const defaultCenter: L.LatLngTuple = [40.74854, -73.98573];
+const defaultZoom: number = 12;
 const venuemarkers: L.LayerGroup = new L.LayerGroup(); //new Array();
 let heatmapLayer: any;
 
 const marker: L.Marker = L.marker(defaultCenter);
 
-let markerIconUrl = "/img/marker-icon-violet.png";
-
-
-// Heatmap config
-let cfg: any = {
-  // radius should be small ONLY if scaleRadius is true (or small radius is intended)
-  "radius": 20,
-  "maxOpacity": 0.6,// 0.6,
-  "minOpacity": 0.3,//0.4,
-  "blur": 1,
-  // scales the radius based on map zoom
-  "scaleRadius": false,
-  // backhround color for whole heatmap layer
-  //backgroundColor: '#13ae4778',
-  // custom gradient colors
-  gradient: {
-    // enter n keys between 0 and 1 here
-    // for gradient color customization
-    '0.0': 'green',
-    '0.5': 'orange',
-    '0.8': 'red'
-  },
-  // if set to false the heatmap uses the global maximum for colorization
-  // if activated: uses the data maximum within the current map boundaries 
-  //   (there will always be a red spot with useLocalExtremas true)
-  "useLocalExtrema": false,
-  // which field name in your data represents the latitude - default "lat"
-  latField: 'lat',
-  // which field name in your data represents the longitude - default "lng"
-  lngField: 'lng',
-  // which field name in your data represents the data value - default "value"
-  valueField: 'count'
-};
-
+var markerIconUrl = "/img/marker-icon-violet.png";
+var moveMapOnInitFail = false;
 // data
 const hour_categories = ['6AM', '7AM', '8AM', '9AM', '10AM', '11AM', '12PM', '1PM', '2PM', '3PM', '4PM', '5PM', '6PM',
   '7PM', '8PM', '9PM', '10PM', '11PM', '12AM', '1AM', '2AM', '3AM', '4AM', '5AM'];
@@ -93,8 +49,41 @@ const choices_hours = [[0, "6AM"], [1, "7AM"], [2, "8AM"], [3, "9AM"], [4, "10AM
   "12AM"], [19, "1AM"], [20, "2AM"], [21, "3AM"], [22, "4AM"],
 [23, "5AM"]]
 
+let windowData: any = {}; //raw data
+let venuesData: Array<any> = []; // all raw venues (pois)
+let animationData: Array<Array<LatLngCount>> = []; // data for animation lat, lgn and weight
+let heatmapData: Array<LatLngCount>;
 
-let venuesData: Array<any> = []; // all raw venues (pois) 7 days, 24 hours
+let getHeatMapData = (data: any, index_hour: number): Array<LatLngCount> => {
+  var heatmapDataNew: Array<LatLngCount> = [];
+
+  data.forEach((item: any, index_data: number) => {
+    let weight = item['day_raw'][index_hour] ? item['day_raw'][index_hour] : 0;
+    //heatmapData2 = [];
+    heatmapDataNew.push({ lat: item['venue_lat'], lng: item['venue_lng'], count: weight });
+
+  });
+  return heatmapDataNew;
+
+}
+
+const dayTimeWindow = {
+  "day_window": "Monday 6AM until Tuesday 5AM",
+  "day_window_end_int": 1,
+  "day_window_end_txt": "Tuesday",
+  "day_window_start_int": 0,
+  "day_window_start_txt": "Monday",
+  "time_local": 7,
+  "time_local_12": "7AM",
+  "time_local_index": 1,
+  "time_window_end": 5,
+  "time_window_end_12h": "5AM",
+  "time_window_end_ix": 23,
+  "time_window_start": 6,
+  "time_window_start_12h": "6AM",
+  "time_window_start_ix": 0
+}
+
 let player;
 
 
@@ -153,6 +142,8 @@ const getJSON = (url: string, callback: any): void => {
 };
 
 
+
+
 // Determines xAxis index values based on the open/close hour so the unopened hours will be cut-off the charts
 function hour2index(hour: number): number {
   let index: number;
@@ -193,6 +184,10 @@ function drawMap() {
     // zoomSnap: 0.1
   });
 
+
+
+  //map_leaflet.setView(defaultCenter, defaultZoom);
+  //basemap.addTo(this.window['map_leaflet']);
   marker.addTo(map_leaflet);
 }
 
@@ -201,7 +196,11 @@ function drawHeatMap(data: Array<any>, setView = true, animation_ix = -1) {
   /* Data points defined as an array of LatLng objects */
   // https://developers.google.com/maps/documentation/javascript/heatmaplayer?hl=nl
 
-  let heatmapData: { max: number; data: Array<LatLngCount> };
+  // console.log("drawMap", setView, animation_ix);
+  // Show closed/empty places with a raw value below weight_min as the weight_min value.
+
+  let weigth_min = 0;
+  let heatmapData: { max: number; data: any };
   if (data) {
 
     // Set map position and zoom
@@ -209,6 +208,37 @@ function drawHeatMap(data: Array<any>, setView = true, animation_ix = -1) {
       // set view
       // to be done
     }
+
+    // Heatmap config
+    let cfg = {
+      // radius should be small ONLY if scaleRadius is true (or small radius is intended)
+      "radius": 20,
+      "maxOpacity": 0.6,// 0.6,
+      "minOpacity": 0.3,//0.4,
+      "blur": 1,
+      // scales the radius based on map zoom
+      "scaleRadius": false,
+      // backhround color for whole heatmap layer
+      //backgroundColor: '#13ae4778',
+      // custom gradient colors
+      gradient: {
+        // enter n keys between 0 and 1 here
+        // for gradient color customization
+        '0.0': 'green',
+        '0.5': 'orange',
+        '0.8': 'red'
+      },
+      // if set to false the heatmap uses the global maximum for colorization
+      // if activated: uses the data maximum within the current map boundaries 
+      //   (there will always be a red spot with useLocalExtremas true)
+      "useLocalExtrema": false,
+      // which field name in your data represents the latitude - default "lat"
+      latField: 'lat',
+      // which field name in your data represents the longitude - default "lng"
+      lngField: 'lng',
+      // which field name in your data represents the data value - default "value"
+      valueField: 'count'
+    };
 
     // Clear existing (invisble) markers with tooltips
     if (map_leaflet.hasLayer(venuemarkers)) {
@@ -221,9 +251,10 @@ function drawHeatMap(data: Array<any>, setView = true, animation_ix = -1) {
 
     heatmapLayer = new HeatmapOverlay(cfg);
 
+
     heatmapData = {
       max: 100,
-      data: data[6][6]
+      data: data
     };
     heatmapLayer.setData(heatmapData);
 
@@ -263,7 +294,19 @@ function drawHeatMap(data: Array<any>, setView = true, animation_ix = -1) {
 }
 
 function animate() {
+  animationData = [];
 
+  // build data
+  for (var i = 0; i < venuesData[0]['day_raw'].length; i++) {
+    let hour_data: Array<LatLngCount> = [];
+    venuesData.forEach((item, index) => {
+      //console.log(item);
+      let weight = item['day_raw'][i];
+      hour_data.push({ lat: item['venue_lat'], lng: item['venue_lng'], count: weight })
+
+    });
+    animationData.push(hour_data);
+  };
   // build player: args-->
   // public heatmap: the layer,
   // public data: the overall hours data,
@@ -272,31 +315,36 @@ function animate() {
   // public readonly wrapperEl: querySelector Element,
   // public playButton: If not, it is created,
   // public isPlaying: boolean
-  player = new AnimationPlayer(heatmapLayer, venuesData[6], 100, 100, document.querySelector('.timeline-wrapper'), null, false);
+  player = new AnimationPlayer(heatmapLayer, animationData, 100, 100, document.querySelector('.timeline-wrapper'), null, false);
   //player.play();
 
 }
-
 function init() {
-  const config = getConfig();
-  let botsoul = "https://botsoul.com/pruebas/heatmap/build/";
   deleteIconDefault();
   drawMap();
-
-  getJSON("./data/samples_popular_times.json", (err: any, data: any) => {
+  getJSON("./data/window_data.json", (err: any, data: any) => {
     if (err !== null) {
       console.log('Something went wrong: ' + err);
     } else {
       console.log('Your query count: ' + data);
-      venuesData = reshapeData(data); // 7 days, 24 hours data
-      drawHeatMap(venuesData); // 1 day, 24 hours data
-
+      windowData = data;
+      venuesData = data.venues;
+      heatmapData = getHeatMapData(venuesData, 0); // init with index 0
+      drawHeatMap(heatmapData);
 
     }
   });
 
+
+
 }
 
 window.onload = () => {
+
+  // window
+  let doc = window.document;
+  // When the user clicks anywhere outside of the modal, close it
+  //doc.addEventListener("click", onClick, false);
   init();
+
 }

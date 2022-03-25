@@ -7,7 +7,7 @@
     "lint:styles": "stylelint src",
     "lint:scripts": "eslint src",
     "start": "cross-env SERVE=true NODE_ENV=development webpack serve --config webpack/webpack.config.dev.js --open",
-    "build": "cross-env NODE_ENV=production ASSET_PATH=/public/route/to/asset/folder webpack --config webpack/webpack.config.prod.js",
+    "build": "cross-env NODE_ENV=production ASSET_PATH=/pruebas/heatmap/build/ webpack --config webpack/webpack.config.prod.js",
     "clean": "rm -rf ./build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
