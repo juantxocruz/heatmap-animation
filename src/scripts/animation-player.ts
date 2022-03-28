@@ -17,6 +17,8 @@ export class AnimationPlayer {
         "time_window_start_ix": 0
     };
 
+    public choices_days = [[0, "Sunday"], [1, "Monday"], [2, "Tuesday"], [3, "Wednesday"], [4, "Thursday"], [5, "Friday"], [6, "Saturday"]];
+
     public choices_hours = [[0, "6AM"], [1, "7AM"], [2, "8AM"], [3, "9AM"], [4, "10AM"], [5, "11AM"], [6, "12PM"],
     [7, "1PM"], [8, "2PM"], [9, "3PM"], [10, "4PM"], [11,
         "5PM"], [12, "6PM"], [13, "7PM"], [14, "8PM"],
@@ -28,16 +30,34 @@ export class AnimationPlayer {
     public currentFrame: number = 0;
     private heatmapData3: any;
 
-    constructor(
-        public heatmap: any,
-        public data: any,
-        public interval: any,
-        public animationSpeed: number,
-        public readonly wrapperEl: any,
-        public playButton: any,
-        public isPlaying: boolean
+    public heatmap: any;
+    public data: any;
+    public interval: any;
+    public animationSpeed: number;
+    public readonly wrapperEl: any;
+    public playButton: any;
+    public isPlaying: boolean;
 
+    constructor(
+        public obj: {
+            heatmap: any,
+            data: any,
+            interval: any,
+            animationSpeed: number,
+            wrapperEl: any,
+            playButton: any,
+            isPlaying: boolean
+        }
     ) {
+        this.heatmap = obj.heatmap;
+        this.data = obj.data;
+        this.interval = obj.interval;
+        this.animationSpeed = obj.animationSpeed || 500;
+        this.wrapperEl = obj.wrapperEl;
+        this.playButton = obj.playButton;
+        this.isPlaying = obj.isPlaying;
+
+        this.stop();
         this.init();
     }
 
@@ -45,6 +65,7 @@ export class AnimationPlayer {
         let dataLen = this.data.length;
         let frame;
         this.wrapperEl.innerHTML = '';
+
         this.playButton = this.playButton ? this.playButton : document.createElement('button');
 
         this.playButton.onclick = () => {
@@ -102,11 +123,13 @@ export class AnimationPlayer {
         }
 
         this.setFrame(frame - 1);
+
     };
 
     public play() {
         // Only play when Live/ Now mode not enabled
         let dataLen = this.data.length;
+
         this.playButton.innerText = 'pause';
         this.interval = setInterval(() => {
             this.setFrame(++this.currentFrame % dataLen);
@@ -116,7 +139,7 @@ export class AnimationPlayer {
 
     public stop() {
         clearInterval(this.interval);
-        this.playButton.innerText = 'play';
+        if (this.playButton) this.playButton.innerText = 'play';
     };
 
     public setFrame(frame: number) {
