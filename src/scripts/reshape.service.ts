@@ -31,6 +31,8 @@ function getAllDaysDataByHours(data: any) {
 
 }
 
+
+
 export function reshapeData(data: any) {
 
   // compute only data with geometry and popular time
@@ -49,9 +51,39 @@ export function reshapeData(data: any) {
     }
 
   });
-  // return [ DAY [ HOURS [ POIS ] ] ]
+  // return [ DAY [ HOURS [ POIS ] ] ] 
+  // DAYS start at 0 is SUNDAY
   // [ HOURS [ POIS ] ] is used to animate map
+  // HOURS start at 0 is 6:00am.
   let daysData = getAllDaysDataByHours(googleDays);
+  let weekData = sumAllWeekData(daysData);
+  daysData.push(weekData); // 7 index is the sum of all week day
   return daysData; // all 7 days week [0 Sunday - 6 Saturday] data by hours [0-23] and pois [lat, lgn, count]
 
+}
+
+export function sumAllWeekData(data: any) {
+  let result: any = []
+
+  data.forEach((day: [][], day_index: number) => {
+    day.forEach((hour: [], hour_index: number) => {
+      if (day_index === 0) {
+        result.push([]);
+      }
+      hour.forEach((poi: any, poi_index: number) => {
+        if (day_index === 0) {
+          result[hour_index].push(
+            {
+              lat: data[day_index][hour_index][poi_index].lat,
+              lng: data[day_index][hour_index][poi_index].lng,
+              count: data[day_index][hour_index][poi_index].count
+            }
+          )
+        } else {
+          result[hour_index][poi_index].count += data[day_index][hour_index][poi_index].count
+        }
+      });
+    });
+  })
+  return result;
 }

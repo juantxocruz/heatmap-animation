@@ -82,20 +82,10 @@ let cfg: any = {
   valueField: 'count'
 };
 
-// data
-const hour_categories = ['6AM', '7AM', '8AM', '9AM', '10AM', '11AM', '12PM', '1PM', '2PM', '3PM', '4PM', '5PM', '6PM',
-  '7PM', '8PM', '9PM', '10PM', '11PM', '12AM', '1AM', '2AM', '3AM', '4AM', '5AM'];
-
-const choices_hours = [[0, "6AM"], [1, "7AM"], [2, "8AM"], [3, "9AM"], [4, "10AM"], [5, "11AM"], [6, "12PM"],
-[7, "1PM"], [8, "2PM"], [9, "3PM"], [10, "4PM"], [11,
-  "5PM"], [12, "6PM"], [13, "7PM"], [14, "8PM"],
-[15, "9PM"], [16, "10PM"], [17, "11PM"], [18,
-  "12AM"], [19, "1AM"], [20, "2AM"], [21, "3AM"], [22, "4AM"],
-[23, "5AM"]]
 
 
 let venuesData: Array<any> = []; // all raw venues (pois) 7 days, 24 hours
-let player;
+let player: any;
 
 
 // map move extends 
@@ -196,7 +186,16 @@ function drawMap() {
   marker.addTo(map_leaflet);
 }
 
-function drawHeatMap(data: Array<any>, setView = true, animation_ix = -1) {
+function drawHeatMap(
+  configuration: {
+    day: number,
+    start: number,
+    end: number,
+    delay: number
+  },
+  data: Array<any>,
+  setView = true,
+  animation_ix = -1) {
   // data: Array<LatLngCount>
   /* Data points defined as an array of LatLng objects */
   // https://developers.google.com/maps/documentation/javascript/heatmaplayer?hl=nl
@@ -223,7 +222,7 @@ function drawHeatMap(data: Array<any>, setView = true, animation_ix = -1) {
 
     heatmapData = {
       max: 100,
-      data: data[6][6]
+      data: data[configuration.day][0]
     };
     heatmapLayer.setData(heatmapData);
 
@@ -256,13 +255,13 @@ function drawHeatMap(data: Array<any>, setView = true, animation_ix = -1) {
 
     });
     // animate
-    animate();
+    animate(configuration);
 
   }
 
 }
 
-function animate() {
+function animate(configuration: any) {
 
   // build player: args-->
   // public heatmap: the layer,
@@ -272,16 +271,62 @@ function animate() {
   // public readonly wrapperEl: querySelector Element,
   // public playButton: If not, it is created,
   // public isPlaying: boolean
-  player = new AnimationPlayer(heatmapLayer, venuesData[6], 100, 100, document.querySelector('.timeline-wrapper'), null, false);
+  player = new AnimationPlayer({
+    heatmap: heatmapLayer,
+    data: venuesData[configuration.day],
+    interval: 100,
+    animationSpeed: getAnimationSpeed(),
+    wrapperEl: document.querySelector('.timeline-wrapper'),
+    playButton: null,
+    isPlaying: false
+  });
   //player.play();
 
+
 }
+
+function initSelectors() {
+  let day = document.getElementById("daySelector");
+  let delay = document.getElementById("animateDelay");
+  day.addEventListener("change", onSelectChange, false);
+  delay.addEventListener("change", onDelayChange, false);
+}
+
+let onDelayChange = (e: any) => {
+  player.setAnimationSpeed(parseInt(e.currentTarget.value));
+};
+
+function getAnimationSpeed() {
+  var delaySelect: any = document.getElementById("animateDelay");
+  var delay: number = Number(delaySelect.options[delaySelect.selectedIndex].value);
+  return delay;
+
+}
+
+let onSelectChange = (e: any) => {
+  if (player) player.stop();
+
+  let selection = {
+    day: 0,
+    start: 6, // to be done, now 24hours
+    end: 5, // to be done, now 24hours,
+    delay: getAnimationSpeed()
+  }
+  if (e.currentTarget.id === 'daySelector') { // index 7 is the sum of all week data
+    selection.day = Number(e.currentTarget.value);
+
+  }
+  drawHeatMap(selection, venuesData);
+
+
+};
 
 function init() {
   const config = getConfig();
   let botsoul = "https://botsoul.com/pruebas/heatmap/build/";
   deleteIconDefault();
   drawMap();
+  initSelectors();
 
   getJSON("./data/samples_popular_times.json", (err: any, data: any) => {
     if (err !== null) {
@@ -289,7 +334,12 @@ function init() {
     } else {
       console.log('Your query count: ' + data);
       venuesData = reshapeData(data); // 7 days, 24 hours data
-      drawHeatMap(venuesData); // 1 day, 24 hours data
+      drawHeatMap({
+        day: 0, // sunday 
+        start: 6,
+        end: 5,
+        delay: 1000
+      }, venuesData); // 1 day, 24 hours data
 
 
     }

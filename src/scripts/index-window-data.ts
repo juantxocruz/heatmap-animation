@@ -315,7 +315,15 @@ function animate() {
   // public readonly wrapperEl: querySelector Element,
   // public playButton: If not, it is created,
   // public isPlaying: boolean
-  player = new AnimationPlayer(heatmapLayer, animationData, 100, 100, document.querySelector('.timeline-wrapper'), null, false);
+  player = new AnimationPlayer({
+    heatmap: heatmapLayer,
+    data: animationData,
+    interval: 100,
+    animationSpeed: 100,
+    wrapperEl: document.querySelector('.timeline-wrapper'),
+    playButton: null,
+    isPlaying: false
+  });
   //player.play();
 
 }
