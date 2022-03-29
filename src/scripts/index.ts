@@ -242,7 +242,7 @@ let getDDay = (day: string): Array<any> => {
   let result = choices_days.filter((d) => {
     return d[0] === Number(day);
   });
-  return result.length > 0 ? result[0] : [0, "Sunday"];
+  return result.length > 0 ? result[0] : choices_days[0]; // [0, "Sunday"];
 
 }
 
@@ -253,7 +253,7 @@ let getNextDay = (day: any) => {
   let result = choices_days.filter((d) => {
     return d[0] === ix;
   });
-  return result.length > 0 ? result[0] : [6, "Saturday"];
+  return result.length > 0 ? result[0] : choices_days[choices_days.length - 1]; // [6, "Saturday"];
 
 }
 
@@ -264,7 +264,7 @@ let getMinHour = (hour: string) => {
       return d[2] === Number(hour);
     })[0];
   } else {
-    result = [0, "6AM", 6]
+    result = choices_hours[0];// [0, "6AM", 6]
   }
   return result;
 
@@ -276,7 +276,7 @@ let getMaxHour = (hour: string) => {
       return d[2] === Number(hour);
     })[0];
   } else {
-    result = [23, "5AM", 5]
+    result = choices_hours[choices_hours.length - 1]; //   [23, "5AM", 5]
   }
   return result;
 
@@ -333,6 +333,8 @@ function getDayAndHours() {
 function onHourChange(e: any) {
 
   let timeWindow = setDayTimeWindow();
+  let delay: number = Number(getOptionValue('animateDelay'));
+  drawHeatMap(timeWindow, venuesData, delay);
 
 }
 
