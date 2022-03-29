@@ -60,13 +60,25 @@ export function reshapeData(data: any) {
   // [ HOURS [ POIS ] ] is used to animate map
   // HOURS start at 0 is 6:00am.
   let daysData = getAllDaysDataByHours(googleDays);
-  let weekData = sumAllWeekData(daysData);
-  daysData.push(weekData); // 7 index is the sum of all week day
+  let weekData = sumWeekDaysData(daysData);
+  let weekMediaData = mediaWeekDaysData(weekData);
+  daysData.push(weekMediaData); // 7 index is the sum of all week day and divided by 7
   return daysData; // all 7 days week [0 Sunday - 6 Saturday] data by hours [0-23] and pois [lat, lgn, count]
 
 }
 
-export function sumAllWeekData(data: any) {
+
+function mediaWeekDaysData(hours: [][]) {
+  let day = hours.map((hour: any[]) => {
+    let pois = hour.map((poi) => {
+      poi.count = Math.round(poi.count / 7);
+      return poi;
+    })
+    return hour;
+  });
+  return day;
+}
+export function sumWeekDaysData(data: any) {
   let result: any = []
 
   data.forEach((day: [][], day_index: number) => {
@@ -89,6 +101,7 @@ export function sumAllWeekData(data: any) {
       });
     });
   })
+
   return result;
 }
 

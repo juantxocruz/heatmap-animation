@@ -102,7 +102,7 @@ export class AnimationPlayer {
             frame = this.dayTimeWindow['time_window_start_ix'] - this.dayTimeWindow['time_window_start_ix'];
         }
 
-        this.setFrame(frame - 1);
+        this.setFrame(frame);
 
     };
 

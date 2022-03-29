@@ -17,10 +17,14 @@ if (process.env.NODE_ENV === 'development') {
 
 
 function getConfig() {
-  let url = window.location;
+  let url: any = window.location;
+  let location: string = url.href;
+  let directoryPath = location.substring(0, location.lastIndexOf("/") + 1);
+
   return {
     url: url,
-    baseUrl: url.protocol + "//" + url.host + "/" + url.pathname.split('/')[1]
+    location: location,
+    directoryPath: directoryPath
 
   }
 }
@@ -164,7 +168,7 @@ function drawHeatMap(
 
     heatmapData = {
       max: 100,
-      data: data[dayIndex][0]
+      data: heatmapData2[dayIndex][0]
     };
     heatmapLayer.setData(heatmapData);
 
@@ -197,13 +201,13 @@ function drawHeatMap(
 
     });
     // animate
-    animate(configuration);
+    animate(configuration, heatmapData2[dayIndex]);
 
   }
 
 }
 
-function animate(configuration: any) {
+function animate(configuration: any, heatMapData: Array<[]>) {
   let dayIndex = getDayIndex(configuration);
 
   // build player: args-->
@@ -216,7 +220,7 @@ function animate(configuration: any) {
   // public isPlaying: boolean
   player = new AnimationPlayer({
     heatmap: heatmapLayer,
-    data: venuesData[dayIndex],
+    data: heatMapData,
     interval: 100,
     animationSpeed: Number(getOptionValue('animateDelay')),
     wrapperEl: document.querySelector('.timeline-wrapper'),
@@ -332,7 +336,7 @@ function getDayAndHours() {
 
 }
 function onHourChange(e: any) {
-
+  if (player) player.stop();
   let timeWindow = setDayTimeWindow();
   let delay: number = Number(getOptionValue('animateDelay'));
   drawHeatMap(timeWindow, venuesData, delay);
@@ -385,7 +389,7 @@ function init() {
   drawMap();
   initSelectors();
 
-  getJSON("./data/samples_popular_times.json", (err: any, data: any) => {
+  getJSON(config.directoryPath + "data/samples_popular_times.json", (err: any, data: any) => {
     if (err !== null) {
       console.log('Something went wrong: ' + err);
     } else {
