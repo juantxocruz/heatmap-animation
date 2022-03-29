@@ -1,8 +1,9 @@
 import * as L from 'leaflet';
 import HeatmapOverlay from 'leaflet-heatmap';
 import { AnimationPlayer } from './animation-player';
-import { reshapeData } from './reshape.service';
-
+import { reshapeData, LatLngCount } from './reshape.service';
+import { getJSON, choices_days, choices_hours, hour2index, dayTimeWindow } from './globals.service';
+import { heatmap_config } from './heatmap.service'
 import 'leaflet/dist/leaflet.css';
 import '../styles/index.scss';
 
@@ -11,11 +12,6 @@ if (process.env.NODE_ENV === 'development') {
   require('../index.html');
 }
 
-export interface LatLngCount {
-  lat: number;
-  lng: number;
-  count: number
-}
 
 // config
 
@@ -31,7 +27,10 @@ function getConfig() {
 
 
 // map
+
 let map_leaflet: L.Map;
+let markerIconUrl = "/img/marker-icon-violet.png";
+
 const openStreetMapLayer: L.TileLayer = L.tileLayer(
   'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: 'Map data &copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://cloudmade.com">CloudMade</a>',
@@ -44,43 +43,28 @@ const basemap = arcGisMapLayer;
 const defaultCenter: L.LatLngTuple = [40.423686379181405, -3.710858047841252];
 const defaultZoom: number = 16;
 const venuemarkers: L.LayerGroup = new L.LayerGroup(); //new Array();
-let heatmapLayer: any;
-
 const marker: L.Marker = L.marker(defaultCenter);
 
-let markerIconUrl = "/img/marker-icon-violet.png";
 
+export function drawMap() {
+  map_leaflet = L.map('map_leaflet', {
+    fullscreenControl: true,
+    center: defaultCenter,
+    zoom: defaultZoom,
+    layers: [basemap, venuemarkers],
+    scrollWheelZoom: false, // disable original zoom function
+    // smoothWheelZoom: true,  // enable smooth zoom
+    // smoothSensitivity: 1,   // zoom speed. default is 1
+    //leaflet buildin fractional zoom
+    // scrollWheelZoom: true, // disable original zoom function
+    // zoomSnap: 0.1
+  });
 
-// Heatmap config
-let cfg: any = {
-  // radius should be small ONLY if scaleRadius is true (or small radius is intended)
-  "radius": 20,
-  "maxOpacity": 0.6,// 0.6,
-  "minOpacity": 0.3,//0.4,
-  "blur": 1,
-  // scales the radius based on map zoom
-  "scaleRadius": false,
-  // backhround color for whole heatmap layer
-  //backgroundColor: '#13ae4778',
-  // custom gradient colors
-  gradient: {
-    // enter n keys between 0 and 1 here
-    // for gradient color customization
-    '0.0': 'green',
-    '0.5': 'orange',
-    '0.8': 'red'
-  },
-  // if set to false the heatmap uses the global maximum for colorization
-  // if activated: uses the data maximum within the current map boundaries 
-  //   (there will always be a red spot with useLocalExtremas true)
-  "useLocalExtrema": false,
-  // which field name in your data represents the latitude - default "lat"
-  latField: 'lat',
-  // which field name in your data represents the longitude - default "lng"
-  lngField: 'lng',
-  // which field name in your data represents the data value - default "value"
-  valueField: 'count'
-};
+  marker.addTo(map_leaflet);
+}
+
+let heatmapLayer: any;
+
 
 
 
@@ -127,35 +111,8 @@ let toRad = (val: number): number => {
 }
 
 
-const getJSON = (url: string, callback: any): void => {
-  let xhr = new XMLHttpRequest();
-  xhr.open('GET', url, true);
-  xhr.responseType = 'json';
-  xhr.onload = () => {
-    let status = xhr.status;
-    if (status === 200) {
-      callback(null, xhr.response);
-    } else {
-      callback(status, xhr.response);
-    }
-  };
-  xhr.send();
-};
 
 
-// Determines xAxis index values based on the open/close hour so the unopened hours will be cut-off the charts
-function hour2index(hour: number): number {
-  let index: number;
-
-  if (hour >= 6 && hour <= 23) {
-    index = hour - 6
-  } else {
-    index = hour + 18
-  }
-  // console.log(hour, index)
-
-  return index;
-}
 
 
 function deleteIconDefault() {
@@ -169,31 +126,11 @@ function deleteIconDefault() {
 
 }
 
-function drawMap() {
-  map_leaflet = L.map('map_leaflet', {
-    fullscreenControl: true,
-    center: defaultCenter,
-    zoom: defaultZoom,
-    layers: [basemap, venuemarkers],
-    scrollWheelZoom: false, // disable original zoom function
-    // smoothWheelZoom: true,  // enable smooth zoom
-    // smoothSensitivity: 1,   // zoom speed. default is 1
-    //leaflet buildin fractional zoom
-    // scrollWheelZoom: true, // disable original zoom function
-    // zoomSnap: 0.1
-  });
-
-  marker.addTo(map_leaflet);
-}
 
 function drawHeatMap(
-  configuration: {
-    day: number,
-    start: number,
-    end: number,
-    delay: number
-  },
+  configuration: any,
   data: Array<any>,
+  delay: number = 1000,
   setView = true,
   animation_ix = -1) {
   // data: Array<LatLngCount>
@@ -201,6 +138,10 @@ function drawHeatMap(
   // https://developers.google.com/maps/documentation/javascript/heatmaplayer?hl=nl
 
   let heatmapData: { max: number; data: Array<LatLngCount> };
+  let dayIndex = getDayIndex(configuration);
+
+
+
   if (data) {
 
     // Set map position and zoom
@@ -218,11 +159,11 @@ function drawHeatMap(
       map_leaflet.removeLayer(heatmapLayer);
     }
 
-    heatmapLayer = new HeatmapOverlay(cfg);
+    heatmapLayer = new HeatmapOverlay(heatmap_config);
 
     heatmapData = {
       max: 100,
-      data: data[configuration.day][0]
+      data: data[dayIndex][0]
     };
     heatmapLayer.setData(heatmapData);
 
@@ -262,6 +203,7 @@ function drawHeatMap(
 }
 
 function animate(configuration: any) {
+  let dayIndex = getDayIndex(configuration);
 
   // build player: args-->
   // public heatmap: the layer,
@@ -273,53 +215,165 @@ function animate(configuration: any) {
   // public isPlaying: boolean
   player = new AnimationPlayer({
     heatmap: heatmapLayer,
-    data: venuesData[configuration.day],
+    data: venuesData[dayIndex],
     interval: 100,
-    animationSpeed: getAnimationSpeed(),
+    animationSpeed: Number(getOptionValue('animateDelay')),
     wrapperEl: document.querySelector('.timeline-wrapper'),
     playButton: null,
-    isPlaying: false
+    isPlaying: false,
+    dayTimeWindow: configuration
   });
   //player.play();
 
 
 }
 
-function initSelectors() {
-  let day = document.getElementById("daySelector");
-  let delay = document.getElementById("animateDelay");
-  day.addEventListener("change", onSelectChange, false);
-  delay.addEventListener("change", onDelayChange, false);
+
+function getHours(): any {
+  return {
+    hourMin: getOptionValue("hour_min"),
+    hourMax: getOptionValue("hour_max")
+  }
 }
+
+
+let getDDay = (day: string): Array<any> => {
+
+  let result = choices_days.filter((d) => {
+    return d[0] === Number(day);
+  });
+  return result.length > 0 ? result[0] : [0, "Sunday"];
+
+}
+
+let getNextDay = (day: any) => {
+
+  let ix = Number(day) === 6 ? 0 : (Number(day) + 1);
+
+  let result = choices_days.filter((d) => {
+    return d[0] === ix;
+  });
+  return result.length > 0 ? result[0] : [6, "Saturday"];
+
+}
+
+let getMinHour = (hour: string) => {
+  let result;
+  if (hour) {
+    result = choices_hours.filter((d) => {
+      return d[2] === Number(hour);
+    })[0];
+  } else {
+    result = [0, "6AM", 6]
+  }
+  return result;
+
+}
+let getMaxHour = (hour: string) => {
+  let result;
+  if (hour) {
+    result = choices_hours.filter((d) => {
+      return d[2] === Number(hour);
+    })[0];
+  } else {
+    result = [23, "5AM", 5]
+  }
+  return result;
+
+}
+
+
+function setDayTimeWindow() {
+  let dayAndHours = getDayAndHours();
+  let day = dayAndHours.day;
+  let hours = dayAndHours.hours;
+
+  if (hours.hourMin !== "" && hours.hourMax !== "") {
+    if (hour2index(Number(dayAndHours.hours.hourMax)) < hour2index(Number(dayAndHours.hours.hourMin))) {
+      alert("Error: The minimum hour is higher than the maximum hour.")
+      return false;
+    }
+  }
+
+  let dDay = getDDay(day);
+  let dNextDay = getNextDay(day);
+  let dMinHour = getMinHour(hours.hourMin);
+  let dMaxHour = getMaxHour(hours.hourMax);
+
+  //  "Monday 6AM until Tuesday 5AM",
+  // "{{day}} {{hour_min}} until {{next_day}} {{hour_max}}"
+  let dayTimeWindow = {
+    "day_window": dDay[1] + " " + dMinHour[1] + " until " + dNextDay[1] + " " + dMaxHour[1],
+    "day_window_end_int": dNextDay[0],
+    "day_window_end_txt": dNextDay[1],
+    "day_window_start_int": dDay[0],
+    "day_window_start_txt": dDay[1],
+    "time_local": 7,
+    "time_local_12": "7AM",
+    "time_local_index": 1,
+    "time_window_end": dMaxHour[2],
+    "time_window_end_12h": dMaxHour[1],
+    "time_window_end_ix": dMaxHour[0],
+    "time_window_start": dMinHour[2],
+    "time_window_start_12h": dMinHour[1],
+    "time_window_start_ix": dMinHour[0]
+  };
+  return dayTimeWindow;
+
+}
+
+
+function getDayAndHours() {
+  return {
+    day: getOptionValue("daySelector"),
+    hours: getHours()
+  }
+
+}
+function onHourChange(e: any) {
+
+  let timeWindow = setDayTimeWindow();
+
+}
+
+function getDayIndex(configuration: any) {
+  return configuration.day_window_start_int === 0 && configuration.day_window_end_int === 6 ? 7 : configuration.day_window_start_int;
+}
+function getOptionValue(id: string) {
+  let select: any = document.getElementById(id);
+  var result: string = select.options[select.selectedIndex].value;
+  return result;
+
+}
+let onDayChange = (e: any) => {
+  if (player) player.stop();
+
+  let timeWindow = setDayTimeWindow();
+  let delay: number = Number(getOptionValue('animateDelay'));
+  //we are here to pass TimeWindow
+  drawHeatMap(timeWindow, venuesData, delay);
+};
+
 
 let onDelayChange = (e: any) => {
   player.setAnimationSpeed(parseInt(e.currentTarget.value));
 };
 
-function getAnimationSpeed() {
-  var delaySelect: any = document.getElementById("animateDelay");
-  var delay: number = Number(delaySelect.options[delaySelect.selectedIndex].value);
-  return delay;
+function initSelectors() {
+  let day = document.getElementById("daySelector");
+  let delay = document.getElementById("animateDelay");
+  let hourMin = document.getElementById("hour_min");
+  let hourMax = document.getElementById("hour_max");
+
+  day.addEventListener("change", onDayChange, false);
+  delay.addEventListener("change", onDelayChange, false);
+  hourMin.addEventListener("change", onHourChange, false);
+  hourMax.addEventListener("change", onHourChange, false);
 
 }
 
-let onSelectChange = (e: any) => {
-  if (player) player.stop();
-
-  let selection = {
-    day: 0,
-    start: 6, // to be done, now 24hours
-    end: 5, // to be done, now 24hours,
-    delay: getAnimationSpeed()
-  }
-  if (e.currentTarget.id === 'daySelector') { // index 7 is the sum of all week data
-    selection.day = Number(e.currentTarget.value);
-
-  }
-  drawHeatMap(selection, venuesData);
 
 
-};
 
 function init() {
   const config = getConfig();
@@ -334,13 +388,10 @@ function init() {
     } else {
       console.log('Your query count: ' + data);
       venuesData = reshapeData(data); // 7 days, 24 hours data
-      drawHeatMap({
-        day: 0, // sunday 
-        start: 6,
-        end: 5,
-        delay: 1000
-      }, venuesData); // 1 day, 24 hours data
-
+      let timeWindow = setDayTimeWindow();
+      let delay: number = Number(getOptionValue('animateDelay')) || 500;
+      //we are here to pass TimeWindow
+      drawHeatMap(timeWindow, venuesData, delay);
 
     }
   });

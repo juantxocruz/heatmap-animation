@@ -1,10 +1,14 @@
+import { choices_days, choices_hours } from './globals.service'; // starting on sunday [0]
+export interface LatLngCount {
+  lat: number;
+  lng: number;
+  count: number
+}
 
-// starting on sunday [0]
-let choice_days = [0, 1, 2, 3, 4, 5, 6];
 
 // google data: from 6 to 23, hour start at 6
 // fill the gap (0, 1, 2, 3, 4, 5,) with zeros
-let choices_hours = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 0, 1, 2, 3, 4, 5];
+//let choices_hours = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 0, 1, 2, 3, 4, 5];
 
 // Testing for primitives: undefined null boolean string number
 function isPrimitive(o: any) { return typeof o !== 'object' || null };
@@ -12,7 +16,7 @@ function isPrimitive(o: any) { return typeof o !== 'object' || null };
 function getAllDaysDataByHours(data: any) {
   let temp: Array<Array<Array<any>>> = []; // day,hour, pois
 
-  choice_days.forEach((day: any, day_index: number) => {
+  choices_days.forEach((day: any, day_index: number) => {
     temp.push([]); // one day
     choices_hours.forEach((hour: any, hour_index) => {
       temp[day_index].push([]); // 24 hours
@@ -22,7 +26,7 @@ function getAllDaysDataByHours(data: any) {
         temp[day_index][hour_index].push({
           lat: d.lat,
           lng: d.lng,
-          count: isPrimitive(d.days[day_index]) ? 0 : d.days[day_index][hour] ? d.days[day_index][hour] : 0
+          count: isPrimitive(d.days[day_index]) ? 0 : d.days[day_index][hour[2]] ? d.days[day_index][hour[2]] : 0
         });
       });
     });

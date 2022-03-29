@@ -322,7 +322,8 @@ function animate() {
     animationSpeed: 100,
     wrapperEl: document.querySelector('.timeline-wrapper'),
     playButton: null,
-    isPlaying: false
+    isPlaying: false,
+    dayTimeWindow: dayTimeWindow
   });
   //player.play();
 

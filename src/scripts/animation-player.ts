@@ -1,32 +1,9 @@
+
+import { choices_days, choices_hours } from './globals.service';
 export class AnimationPlayer {
 
-    public dayTimeWindow = {
-        "day_window": "Monday 6AM until Tuesday 5AM",
-        "day_window_end_int": 1,
-        "day_window_end_txt": "Tuesday",
-        "day_window_start_int": 0,
-        "day_window_start_txt": "Monday",
-        "time_local": 7,
-        "time_local_12": "7AM",
-        "time_local_index": 1,
-        "time_window_end": 5,
-        "time_window_end_12h": "5AM",
-        "time_window_end_ix": 23,
-        "time_window_start": 6,
-        "time_window_start_12h": "6AM",
-        "time_window_start_ix": 0
-    };
-
-    public choices_days = [[0, "Sunday"], [1, "Monday"], [2, "Tuesday"], [3, "Wednesday"], [4, "Thursday"], [5, "Friday"], [6, "Saturday"]];
-
-    public choices_hours = [[0, "6AM"], [1, "7AM"], [2, "8AM"], [3, "9AM"], [4, "10AM"], [5, "11AM"], [6, "12PM"],
-    [7, "1PM"], [8, "2PM"], [9, "3PM"], [10, "4PM"], [11,
-        "5PM"], [12, "6PM"], [13, "7PM"], [14, "8PM"],
-    [15, "9PM"], [16, "10PM"], [17, "11PM"], [18,
-        "12AM"], [19, "1AM"], [20, "2AM"], [21, "3AM"], [22, "4AM"],
-    [23, "5AM"]];
-
-
+    choices_days = choices_days;
+    choices_hours = choices_hours
     public currentFrame: number = 0;
     private heatmapData3: any;
 
@@ -37,6 +14,7 @@ export class AnimationPlayer {
     public readonly wrapperEl: any;
     public playButton: any;
     public isPlaying: boolean;
+    public dayTimeWindow: any;
 
     constructor(
         public obj: {
@@ -46,7 +24,8 @@ export class AnimationPlayer {
             animationSpeed: number,
             wrapperEl: any,
             playButton: any,
-            isPlaying: boolean
+            isPlaying: boolean,
+            dayTimeWindow: any
         }
     ) {
         this.heatmap = obj.heatmap;
@@ -56,6 +35,7 @@ export class AnimationPlayer {
         this.wrapperEl = obj.wrapperEl;
         this.playButton = obj.playButton;
         this.isPlaying = obj.isPlaying;
+        this.dayTimeWindow = obj.dayTimeWindow
 
         this.stop();
         this.init();
