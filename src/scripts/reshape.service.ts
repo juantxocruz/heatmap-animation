@@ -1,4 +1,4 @@
-import { choices_days, choices_hours } from './globals.service'; // starting on sunday [0]
+import { choices_days, choices_hours, hour2index } from './globals.service'; // starting on sunday [0]
 export interface LatLngCount {
   lat: number;
   lng: number;
@@ -89,5 +89,16 @@ export function sumAllWeekData(data: any) {
       });
     });
   })
+  return result;
+}
+
+export function sliceHoursfromData(configuration: any, data: Array<any>) {
+  // configuration.time_window_start_ix
+  // configuration.time_window_end_ix
+
+  let result = data.map((day) => {
+    day = day.slice(configuration.time_window_start_ix, configuration.time_window_end_ix + 1)
+    return day;
+  });
   return result;
 }

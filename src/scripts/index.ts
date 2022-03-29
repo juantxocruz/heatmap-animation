@@ -1,7 +1,7 @@
 import * as L from 'leaflet';
 import HeatmapOverlay from 'leaflet-heatmap';
 import { AnimationPlayer } from './animation-player';
-import { reshapeData, LatLngCount } from './reshape.service';
+import { reshapeData, sliceHoursfromData, LatLngCount } from './reshape.service';
 import { getJSON, choices_days, choices_hours, hour2index, dayTimeWindow } from './globals.service';
 import { heatmap_config } from './heatmap.service'
 import 'leaflet/dist/leaflet.css';
@@ -67,7 +67,7 @@ let heatmapLayer: any;
 
 
 
-
+let poisData: any; // original pois 
 let venuesData: Array<any> = []; // all raw venues (pois) 7 days, 24 hours
 let player: any;
 
@@ -137,6 +137,7 @@ function drawHeatMap(
   /* Data points defined as an array of LatLng objects */
   // https://developers.google.com/maps/documentation/javascript/heatmaplayer?hl=nl
 
+  let heatmapData2 = sliceHoursfromData(configuration, data);
   let heatmapData: { max: number; data: Array<LatLngCount> };
   let dayIndex = getDayIndex(configuration);
 
@@ -388,7 +389,7 @@ function init() {
     if (err !== null) {
       console.log('Something went wrong: ' + err);
     } else {
-      console.log('Your query count: ' + data);
+      poisData = data; // original data
       venuesData = reshapeData(data); // 7 days, 24 hours data
       let timeWindow = setDayTimeWindow();
       let delay: number = Number(getOptionValue('animateDelay')) || 500;
