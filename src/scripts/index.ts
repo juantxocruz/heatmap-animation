@@ -1,7 +1,7 @@
 import * as L from 'leaflet';
 import HeatmapOverlay from 'leaflet-heatmap';
 import { AnimationPlayer } from './animation-player';
-import { reshapeData, sliceHoursfromData, LatLngCount } from './reshape.service';
+import { reshapeData, getGoogleDataPois, sliceHoursfromData, LatLngCount } from './reshape.service';
 import { getJSON, choices_days, choices_hours, hour2index, dayTimeWindow } from './globals.service';
 import { heatmap_config } from './heatmap.service'
 import 'leaflet/dist/leaflet.css';
@@ -13,9 +13,7 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 
-// config
-
-
+// URL config
 function getConfig() {
   let url: any = window.location;
   let location: string = url.href;
@@ -25,16 +23,15 @@ function getConfig() {
     url: url,
     location: location,
     directoryPath: directoryPath
-
   }
 }
-
 
 // map
 
 let map_leaflet: L.Map;
 let markerIconUrl = "/img/marker-icon-violet.png";
 
+// you can change layer design: openStreet or ArGis
 const openStreetMapLayer: L.TileLayer = L.tileLayer(
   'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: 'Map data &copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://cloudmade.com">CloudMade</a>',
@@ -47,6 +44,7 @@ const basemap = arcGisMapLayer;
 const defaultCenter: L.LatLngTuple = [40.423686379181405, -3.710858047841252];
 const defaultZoom: number = 16;
 const venuemarkers: L.LayerGroup = new L.LayerGroup(); //new Array();
+const venuemarkers2: any = [];
 const marker: L.Marker = L.marker(defaultCenter);
 
 
@@ -68,11 +66,7 @@ export function drawMap() {
 }
 
 let heatmapLayer: any;
-
-
-
 let poisData: any; // original pois 
-let venuesData: Array<any> = []; // all raw venues (pois) 7 days, 24 hours
 let player: any;
 
 
@@ -116,9 +110,6 @@ let toRad = (val: number): number => {
 
 
 
-
-
-
 function deleteIconDefault() {
   /* This code is needed to properly load the images in the Leaflet CSS */
   delete L.Icon.Default.prototype._getIconUrl;
@@ -130,24 +121,49 @@ function deleteIconDefault() {
 
 }
 
+function onClickVenueMarker(event: any) {
+  console.log(event);
+  return false;
+}
+function addVenueMarkers(tabledata: any[]) {
+
+  // use venueMarkers if you needed all pois info
+  // restore the array
+  venuemarkers2.length = 0;
+
+
+  // Draw all heatmap elements
+  for (let i = 0; i < tabledata.length; i++) {
+
+    var venuemarker: any = L.marker([tabledata[i].geometry.coordinates[1], tabledata[i].geometry.coordinates[0]],
+      {
+        opacity: 0,
+        // title: tabledata[i].venue_name + ", " + tabledata[i].venue_address
+      }).on('click', onClickVenueMarker);
+
+    venuemarker.tableid = i;
+    //Add to venuemarkers array
+    venuemarkers2.push(venuemarker);
+    // Add array element to map_leaflet
+    //console.log(venuemarker);
+    venuemarkers.addLayer(venuemarker);
+
+  }
+}
 
 function drawHeatMap(
-  configuration: any,
-  data: Array<any>,
-  delay: number = 1000,
-  setView = true,
-  animation_ix = -1) {
+  setView = true) {
   // data: Array<LatLngCount>
   /* Data points defined as an array of LatLng objects */
   // https://developers.google.com/maps/documentation/javascript/heatmaplayer?hl=nl
 
-  let heatmapData2 = sliceHoursfromData(configuration, data);
+  let timeWindow = setDayTimeWindow();
+  let sevenDaysData = reshapeData(poisData); // 7 days, 24 hours data
+  let heatmapData2 = sliceHoursfromData(timeWindow, sevenDaysData);
   let heatmapData: { max: number; data: Array<LatLngCount> };
-  let dayIndex = getDayIndex(configuration);
+  let dayIndex = getDayIndex(timeWindow);
 
-
-
-  if (data) {
+  if (sevenDaysData) {
 
     // Set map position and zoom
     if (setView == true) {
@@ -176,7 +192,7 @@ function drawHeatMap(
     heatmapLayer.addTo(map_leaflet);
 
     // Add leaflet markers (if needeed)
-    // addVenueMarkers(data);
+    addVenueMarkers(poisData);
     // Update map location and zoom in url params on map drag and zoom
 
     map_leaflet.on("moveend", function () {
@@ -201,14 +217,13 @@ function drawHeatMap(
 
     });
     // animate
-    animate(configuration, heatmapData2[dayIndex]);
+    animate(timeWindow, heatmapData2[dayIndex]);
 
   }
 
 }
 
 function animate(configuration: any, heatMapData: Array<[]>) {
-  let dayIndex = getDayIndex(configuration);
 
   // build player: args-->
   // public heatmap: the layer,
@@ -228,8 +243,6 @@ function animate(configuration: any, heatMapData: Array<[]>) {
     isPlaying: false,
     dayTimeWindow: configuration
   });
-  //player.play();
-
 
 }
 
@@ -337,9 +350,7 @@ function getDayAndHours() {
 }
 function onHourChange(e: any) {
   if (player) player.stop();
-  let timeWindow = setDayTimeWindow();
-  let delay: number = Number(getOptionValue('animateDelay'));
-  drawHeatMap(timeWindow, venuesData, delay);
+  drawHeatMap();
 
 }
 
@@ -350,17 +361,11 @@ function getOptionValue(id: string) {
   let select: any = document.getElementById(id);
   var result: string = select.options[select.selectedIndex].value;
   return result;
-
 }
 let onDayChange = (e: any) => {
   if (player) player.stop();
-
-  let timeWindow = setDayTimeWindow();
-  let delay: number = Number(getOptionValue('animateDelay'));
-  //we are here to pass TimeWindow
-  drawHeatMap(timeWindow, venuesData, delay);
+  drawHeatMap();
 };
-
 
 let onDelayChange = (e: any) => {
   player.setAnimationSpeed(parseInt(e.currentTarget.value));
@@ -380,11 +385,8 @@ function initSelectors() {
 }
 
 
-
-
 function init() {
   const config = getConfig();
-  let botsoul = "https://botsoul.com/pruebas/heatmap/build/";
   deleteIconDefault();
   drawMap();
   initSelectors();
@@ -393,12 +395,8 @@ function init() {
     if (err !== null) {
       console.log('Something went wrong: ' + err);
     } else {
-      poisData = data; // original data
-      venuesData = reshapeData(data); // 7 days, 24 hours data
-      let timeWindow = setDayTimeWindow();
-      let delay: number = Number(getOptionValue('animateDelay')) || 500;
-      //we are here to pass TimeWindow
-      drawHeatMap(timeWindow, venuesData, delay);
+      poisData = getGoogleDataPois(data); // original data with geometry and google data
+      drawHeatMap();
 
     }
   });

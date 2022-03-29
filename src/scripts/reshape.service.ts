@@ -36,18 +36,19 @@ function getAllDaysDataByHours(data: any) {
 }
 
 
-
-export function reshapeData(data: any) {
-
-  // compute only data with geometry and popular time
-  let googleData = data.filter((d: any) => {
+export function getGoogleDataPois(data: any) {
+  let result = data.filter((d: any) => {
     if (d.geometry && d.geometry.coordinates && d.geometry.coordinates[0] && d.geometry.coordinates[1] && d.properties && d.properties.goo && d.properties.goo.popular_time && d.properties.goo.popular_time.days) {
       return true;
     }
   });
+  return result;
+}
+
+export function reshapeData(data: any) {
 
   // return only lat, lng and days
-  let googleDays = googleData.map((d: any) => {
+  let googleDays = data.map((d: any) => {
     return {
       lat: d.geometry.coordinates[1],
       lng: d.geometry.coordinates[0],
